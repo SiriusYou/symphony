@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 编码工作流统一流水线方案</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #d2a8ff;
+    --accent4: #f0883e;
+    --code-bg: #1c2128;
+    --table-alt: #1c2128;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 0;
+  }
+
+  /* ── Header ── */
+  .hero {
+    background: linear-gradient(135deg, #0d1117 0%, #1a1f35 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 40px 50px;
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: 2.4em;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero .subtitle {
+    font-size: 1.15em;
+    color: var(--text-muted);
+    max-width: 700px;
+    margin: 0 auto 24px;
+  }
+  .hero .pipeline-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 30px;
+  }
+  .hero .pipeline-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 24px;
+    min-width: 180px;
+    text-align: center;
+  }
+  .hero .pipeline-step .step-label {
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .hero .pipeline-step .step-name {
+    font-size: 1.1em;
+    font-weight: 600;
+  }
+  .hero .pipeline-step .step-desc {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .step-1 { border-top: 3px solid var(--accent3); }
+  .step-1 .step-label { color: var(--accent3); }
+  .step-2 { border-top: 3px solid var(--accent); }
+  .step-2 .step-label { color: var(--accent); }
+  .step-3 { border-top: 3px solid var(--accent2); }
+  .step-3 .step-label { color: var(--accent2); }
+  .pipeline-arrow {
+    font-size: 1.5em;
+    color: var(--text-muted);
+  }
+
+  /* ── Content ── */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 48px;
+  }
+  .toc h2 {
+    font-size: 1.1em;
+    margin-bottom: 14px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .toc ol {
+    padding-left: 20px;
+  }
+  .toc li {
+    margin-bottom: 6px;
+  }
+  .toc a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.95em;
+  }
+  .toc a:hover { text-decoration: underline; }
+
+  /* ── Sections ── */
+  .section {
+    margin-bottom: 56px;
+  }
+  h2 {
+    font-size: 1.6em;
+    font-weight: 700;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  h3 {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin: 28px 0 12px;
+    color: var(--accent);
+  }
+  h4 {
+    font-size: 1.05em;
+    font-weight: 600;
+    margin: 20px 0 10px;
+    color: var(--accent3);
+  }
+  p, li {
+    color: var(--text);
+    margin-bottom: 8px;
+    font-size: 0.95em;
+  }
+  ul, ol {
+    padding-left: 24px;
+    margin-bottom: 16px;
+  }
+  strong { color: #fff; }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px;
+    font-size: 0.9em;
+  }
+  th {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  td {
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td {
+    background: var(--table-alt);
+  }
+
+  /* ── Code ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    margin: 12px 0 20px;
+    font-size: 0.85em;
+    line-height: 1.6;
+  }
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+    font-size: 0.9em;
+  }
+  p code, li code, td code {
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    font-size: 0.85em;
+    color: var(--accent4);
+  }
+
+  /* ── Callouts ── */
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: rgba(88,166,255,0.06);
+    padding: 16px 20px;
+    margin: 16px 0 24px;
+    border-radius: 0 8px 8px 0;
+  }
+  .callout.warn {
+    border-left-color: var(--accent4);
+    background: rgba(240,136,62,0.06);
+  }
+  .callout.success {
+    border-left-color: var(--accent2);
+    background: rgba(63,185,80,0.06);
+  }
+  .callout p { margin-bottom: 0; }
+
+  /* ── Diagram ── */
+  .diagram {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin: 16px 0 24px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.82em;
+    line-height: 1.5;
+    white-space: pre;
+    color: var(--text-muted);
+  }
+
+  /* ── Stats cards ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 20px 0 28px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+  }
+  .stat-card .stat-value {
+    font-size: 2em;
+    font-weight: 700;
+  }
+  .stat-card .stat-label {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 40px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.85em;
+  }
+
+  /* ── Print ── */
+  @media print {
+    body { background: #fff; color: #111; }
+    .hero { background: none; border-bottom: 2px solid #ddd; }
+    .hero h1 { background: none; -webkit-text-fill-color: #111; color: #111; }
+    pre, .diagram { background: #f6f6f6; border-color: #ddd; }
+    th { background: #f0f0f0; color: #111; }
+    td, p, li { color: #222; }
+    .toc { background: #f9f9f9; }
+    .stat-card { background: #f9f9f9; }
+    .callout { background: #f5f8ff; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════ HERO ════════════ -->
+<div class="hero">
+  <h1>AI 编码工作流统一流水线方案</h1>
+  <p class="subtitle">Agentic Engineer (规划) → OpenClaw / Zoe (编排) → Symphony / Claude / Codex (执行)</p>
+  <div class="pipeline-visual">
+    <div class="pipeline-step step-1">
+      <div class="step-label">阶段 1 &middot; 想清楚</div>
+      <div class="step-name">Agentic Engineer</div>
+      <div class="step-desc">模糊需求 → 设计规范</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step step-2">
+      <div class="step-label">阶段 2 &middot; 分好活</div>
+      <div class="step-name">OpenClaw (Zoe)</div>
+      <div class="step-desc">路由决策 + 人工审批</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step step-3">
+      <div class="step-label">阶段 3 &middot; 做出来</div>
+      <div class="step-name">Symphony / Agent</div>
+      <div class="step-desc">编码 + PR + 合并</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ════════════ TOC ════════════ -->
+<div class="toc">
+  <h2>目录</h2>
+  <ol>
+    <li><a href="#s1">概述</a></li>
+    <li><a href="#s2">系统定位与职责</a></li>
+    <li><a href="#s3">端到端工作流</a></li>
+    <li><a href="#s4">技术实现</a></li>
+    <li><a href="#s5">状态映射</a></li>
+    <li><a href="#s6">部署配置</a></li>
+    <li><a href="#s7">实施计划</a></li>
+    <li><a href="#s8">风险与缓解</a></li>
+    <li><a href="#s9">未来演进</a></li>
+    <li><a href="#appendix">附录</a></li>
+  </ol>
+</div>
+
+<!-- ════════════ §1 概述 ════════════ -->
+<div class="section" id="s1">
+<h2>1. 概述</h2>
+
+<h3>1.1 问题</h3>
+<p>当前 AI 辅助编码领域有三类工具各自为战：</p>
+<ul>
+  <li><strong>规划工具</strong>（如 Agentic Engineer）擅长把模糊需求变成严谨的设计规范，但不管执行</li>
+  <li><strong>编排工具</strong>（如 OpenClaw/Zoe）擅长任务分发和人工审批，但缺乏深度 Agent 执行能力</li>
+  <li><strong>执行引擎</strong>（如 Symphony）擅长自主多轮编码和 PR 管理，但缺乏上游规划和灵活路由</li>
+</ul>
+
+<h3>1.2 方案</h3>
+<p>将三者串联为<strong>三阶段流水线</strong>，每个系统只做自己最擅长的事。</p>
+
+<h3>1.3 核心原则</h3>
+<ol>
+  <li><strong>Agentic Engineer 是前置步骤</strong>，不是可路由的"通道"——所有非平凡任务都应先经过规划</li>
+  <li><strong>OpenClaw (Zoe) 是唯一的编排层</strong>——任务入口、路由决策、人工审批全在这里</li>
+  <li><strong>Symphony 是 OpenClaw 的执行后端之一</strong>——与 Claude CLI、Codex CLI 并列，通过 adapter 模式接入</li>
+  <li><strong>Linear 是共享状态层</strong>——OpenClaw 和 Symphony 通过 Linear 工单状态通信，不需要自建同步机制</li>
+</ol>
+
+<div class="stats">
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--accent3)">~270</div>
+    <div class="stat-label">总代码改动量（行）</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--accent)">4</div>
+    <div class="stat-label">实施周数</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--accent2)">0</div>
+    <div class="stat-label">新增独立服务</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--accent4)">3</div>
+    <div class="stat-label">Agent Adapter 选项</div>
+  </div>
+</div>
+</div>
+
+<!-- ════════════ §2 系统定位 ════════════ -->
+<div class="section" id="s2">
+<h2>2. 系统定位与职责</h2>
+
+<h3>2.1 Agentic Engineer：规划引擎</h3>
+<table>
+  <tr><th>项目</th><th>说明</th></tr>
+  <tr><td>角色</td><td>流水线的第一阶段，所有复杂任务的前置步骤</td></tr>
+  <tr><td>输入</td><td>模糊的产品需求、功能想法、问题描述</td></tr>
+  <tr><td>输出</td><td><code>spec_final.md</code>（经过对抗性压力测试的设计规范）</td></tr>
+  <tr><td>技术栈</td><td>Python + Claude Code Skill</td></tr>
+  <tr><td>运行模式</td><td>按需触发，人工驱动（未来可自动化）</td></tr>
+</table>
+
+<p><strong>核心流程：</strong></p>
+<div class="diagram">灵感捕获 → SDD 生成 → 对抗性压力测试 → 迭代修正 → spec_final.md
+                              ↑                │
+                              └── 未收敛 ───────┘</div>
+
+<p><strong>关键工具：</strong></p>
+<ul>
+  <li><code>scorecard_parser.py</code> — 解析压力测试评分卡，判断是否收敛</li>
+  <li><code>spec_lint.py</code> — 验证设计文档结构完整性</li>
+  <li><code>check_workflow_consistency.py</code> — 跨文档一致性校验</li>
+</ul>
+
+<h3>2.2 OpenClaw (Zoe)：编排层</h3>
+<table>
+  <tr><th>项目</th><th>说明</th></tr>
+  <tr><td>角色</td><td>统一控制中心，负责任务路由和人工审批</td></tr>
+  <tr><td>输入</td><td>Linear 工单（由 spec 拆解而来，或直接创建的简单任务）</td></tr>
+  <tr><td>输出</td><td>路由决策 + 审批结果</td></tr>
+  <tr><td>技术栈</td><td>TypeScript / Next.js / SQLite / Drizzle ORM</td></tr>
+  <tr><td>运行模式</td><td>常驻 Web 服务 + Worker 进程</td></tr>
+</table>
+
+<p><strong>Agent Adapter 体系：</strong></p>
+<table>
+  <tr><th>Adapter</th><th>适用场景</th><th>执行方式</th></tr>
+  <tr><td><code>claude</code></td><td>简单任务、文档生成、代码分析</td><td>Claude Code CLI 直接执行</td></tr>
+  <tr><td><code>codex</code></td><td>简单编码任务</td><td>Codex CLI 直接执行</td></tr>
+  <tr><td><code>symphony</code></td><td>复杂多步任务、需要多轮对话和自动 PR 管理</td><td>委托给 Symphony 执行</td></tr>
+</table>
+
+<h3>2.3 Symphony：深度执行引擎</h3>
+<table>
+  <tr><th>项目</th><th>说明</th></tr>
+  <tr><td>角色</td><td>OpenClaw 的高级执行后端，处理复杂任务</td></tr>
+  <tr><td>输入</td><td>Linear 工单（由 OpenClaw 创建并打 <code>route:symphony</code> 标签）</td></tr>
+  <tr><td>输出</td><td>代码提交、PR、Linear 状态更新</td></tr>
+  <tr><td>技术栈</td><td>Elixir / OTP / Phoenix LiveView</td></tr>
+  <tr><td>运行模式</td><td>独立守护进程，轮询 Linear</td></tr>
+</table>
+
+<p><strong>核心能力（OpenClaw 直接调用 Claude/Codex 不具备的）：</strong></p>
+<ol>
+  <li><strong>多轮 Codex 对话</strong>（max_turns: 20）—— 一个任务可以跨多轮持续执行</li>
+  <li><strong>WORKFLOW.md prompt 工程</strong> —— Liquid 模板 + 完整状态机定义</li>
+  <li><strong>自动 PR 管理</strong> —— 创建 PR、扫描反馈、合并</li>
+  <li><strong>Linear 深度集成</strong> —— Workpad 评论、状态流转、阻塞检测</li>
+  <li><strong>工作空间隔离</strong> —— 每个 issue 独立目录</li>
+  <li><strong>失败自动恢复</strong> —— 指数退避重试、状态协调</li>
+</ol>
+</div>
+
+<!-- ════════════ §3 端到端工作流 ════════════ -->
+<div class="section" id="s3">
+<h2>3. 端到端工作流</h2>
+
+<h3>3.1 全流程图</h3>
+<div class="diagram">工程师
+  │
+  │  ① 提出需求（模糊想法）
+  ▼
+Agentic Engineer
+  │  - 灵感捕获 → SDD 生成
+  │  - 对抗性压力测试
+  │  - 迭代直到收敛
+  │
+  │  ② 产出 spec_final.md
+  ▼
+工单拆解（人工或自动）
+  │  - 将 spec 按模块/功能拆为独立工单
+  │  - 每个工单写入 Linear
+  │  - 标注复杂度和风险
+  │
+  │  ③ 工单进入 Linear
+  ▼
+OpenClaw (Zoe)
+  │  - 工程师在 Web UI 查看工单
+  │  - 为每个工单选择 adapter
+  │
+  ├── 简单任务 (adapter=claude/codex)
+  │     │  - Worker 认领
+  │     │  - 在 git worktree 中执行
+  │     │  - 产出代码变更
+  │     ▼
+  │   awaiting_review → 工程师审批 → merged / rejected
+  │
+  └── 复杂任务 (adapter=symphony)
+        │  - Worker 认领
+        │  - 在 Linear 创建工单 + 打标签
+        │  - 触发 Symphony 拾取
+        ▼
+      Symphony
+        │  - 创建隔离工作空间
+        │  - 多轮 Codex 执行
+        │  - 自动创建 PR
+        │  - 推进到 Human Review
+        ▼
+      OpenClaw 收到完成通知 → 工程师审批
+        │
+        ├── 批准 → Merging → Symphony land → Done
+        └── 拒绝 → Rework → Symphony 重新执行</div>
+
+<h3>3.2 阶段 1：Agentic Engineer 规划</h3>
+<p><strong>触发条件：</strong>新需求涉及架构变更、多模块协同、或工程师判断需要先想清楚再动手。</p>
+<p><strong>执行步骤：</strong></p>
+<ol>
+  <li><strong>灵感捕获</strong> — 将原始需求写入 <code>inspiration.md</code></li>
+  <li><strong>SDD 生成</strong> — 使用 Claude Code 的 spec-driven-dev skill，根据模板生成结构化设计文档</li>
+  <li><strong>压力测试</strong> — 对设计进行对抗性评估，输出评分卡（scorecard JSON）</li>
+  <li><strong>收敛判断</strong> — 运行 <code>scorecard_parser.py</code> 检查是否所有关键问题已解决</li>
+  <li><strong>迭代修正</strong> — 未收敛则修改设计，重复步骤 3-4（建议最多 3 轮）</li>
+  <li><strong>锁定输出</strong> — 收敛后产出 <code>spec_final.md</code></li>
+</ol>
+
+<p><strong>质量门禁：</strong></p>
+<pre><code># 结构验证
+python3 tools/spec_lint.py spec/spec_final.md
+
+# 收敛验证
+python3 tools/scorecard_parser.py spec/scorecard_v1.json --format json
+
+# 一致性验证
+python3 tools/check_workflow_consistency.py</code></pre>
+
+<h3>3.3 阶段 1→2 过渡：工单拆解</h3>
+<p><strong>拆解原则：</strong></p>
+<ol>
+  <li>每个工单对应 spec 中的一个独立模块或功能点</li>
+  <li>工单之间的依赖关系用 Linear 的 <code>blockedBy</code> 表达</li>
+  <li>每个工单必须有明确的验收标准（来自 spec）</li>
+  <li>标注复杂度和风险级别</li>
+</ol>
+
+<p><strong>工单模板：</strong></p>
+<pre><code>Title: [模块名] 功能简述
+
+## 来源
+- Spec: spec_final.md § 章节号
+- 父需求: [原始需求链接]
+
+## 描述
+[从 spec 中提取的具体要求]
+
+## 验收标准
+- [ ] 标准 1（来自 spec）
+- [ ] 标准 2（来自 spec）
+- [ ] 测试通过
+
+## 建议 Adapter
+- complexity:simple → claude/codex
+- complexity:complex → symphony</code></pre>
+
+<h3>3.4 阶段 2：OpenClaw (Zoe) 路由与审批</h3>
+
+<p><strong>路由决策矩阵：</strong></p>
+<table>
+  <tr><th>条件</th><th>选择 Adapter</th><th>理由</th></tr>
+  <tr><td>单文件修改、文档更新、简单 bug fix</td><td><code>claude</code></td><td>Claude Code CLI 足够</td></tr>
+  <tr><td>简单编码任务、单模块功能</td><td><code>codex</code></td><td>Codex CLI 直接执行即可</td></tr>
+  <tr><td>多文件变更、需要多轮对话、需要 PR 管理</td><td><code>symphony</code></td><td>需要 Symphony 的深度执行能力</td></tr>
+  <tr><td>涉及 Linear 状态流转和 Workpad 管理</td><td><code>symphony</code></td><td>Symphony 原生支持</td></tr>
+</table>
+</div>
+
+<!-- ════════════ §4 技术实现 ════════════ -->
+<div class="section" id="s4">
+<h2>4. 技术实现</h2>
+
+<h3>4.1 Symphony 侧改动：标签过滤（~20 行）</h3>
+<p>让 Symphony 只处理被 OpenClaw 路由过来的工单。</p>
+
+<h4>文件：<code>elixir/lib/symphony_elixir/config/schema.ex</code></h4>
+<pre><code>field :labels_include, {:array, :string}, default: []</code></pre>
+
+<h4>文件：<code>elixir/lib/symphony_elixir/orchestrator.ex</code></h4>
+<pre><code>defp candidate_issue?(issue, active_states, terminal_states) do
+  # ... 现有检查逻辑保持不变 ...
+  and labels_match?(issue)
+end
+
+defp labels_match?(%Issue{labels: labels}) when is_list(labels) do
+  required = Config.settings!().tracker[:labels_include] || []
+  case required do
+    [] -> true  # 未配置则不过滤（向后兼容）
+    filter_labels ->
+      normalized = Enum.map(filter_labels, &amp;String.downcase/1)
+      Enum.any?(normalized, &amp;(&amp;1 in labels))
+  end
+end
+
+defp labels_match?(_issue), do: true</code></pre>
+
+<h4>文件：<code>elixir/WORKFLOW.md</code></h4>
+<pre><code>tracker:
+  kind: linear
+  project_slug: "your-project"
+  labels_include:
+    - "route:symphony"</code></pre>
+
+<h3>4.2 OpenClaw 侧改动：Symphony Adapter（~250 行）</h3>
+
+<h4>新增文件：<code>src/lib/adapters/symphony.ts</code></h4>
+<pre><code>import { LinearClient } from "@linear/sdk";
+
+interface SymphonyAdapterConfig {
+  symphonyApiUrl: string;
+  linearApiKey: string;
+  linearTeamId: string;
+  linearProjectId: string;
+  routeLabel: string;          // 默认 "route:symphony"
+  pollIntervalMs: number;      // 建议 10000
+  timeoutMs: number;           // 建议 3600000 (1h)
+}
+
+export class SymphonyAdapter {
+  private linear: LinearClient;
+  private config: SymphonyAdapterConfig;
+
+  constructor(config: SymphonyAdapterConfig) {
+    this.config = config;
+    this.linear = new LinearClient({ apiKey: config.linearApiKey });
+  }
+
+  async execute(task: TaskInput): Promise&lt;AdapterResult&gt; {
+    // 1. 在 Linear 创建带 route:symphony 标签的工单
+    const issue = await this.createLinearIssue(task);
+
+    // 2. 触发 Symphony 立即轮询
+    await this.triggerSymphonyRefresh();
+
+    // 3. 轮询监控直到 Symphony 完成
+    return await this.pollUntilComplete(issue.identifier);
+  }
+
+  private async createLinearIssue(task: TaskInput) {
+    const labels = await this.linear.issueLabels({
+      filter: { name: { eq: this.config.routeLabel } },
+    });
+    const labelId = labels.nodes[0]?.id;
+
+    const team = await this.linear.team(this.config.linearTeamId);
+    const states = await team.states();
+    const todoState = states.nodes.find(
+      (s) =&gt; s.name.toLowerCase() === "todo"
+    );
+
+    const result = await this.linear.createIssue({
+      teamId: this.config.linearTeamId,
+      projectId: this.config.linearProjectId,
+      title: task.title,
+      description: task.description,
+      stateId: todoState?.id,
+      labelIds: labelId ? [labelId] : [],
+    });
+
+    return await result.issue;
+  }
+
+  private async triggerSymphonyRefresh() {
+    try {
+      await fetch(`${this.config.symphonyApiUrl}/api/v1/refresh`, {
+        method: "POST",
+      });
+    } catch { /* Symphony 下一周期自动拾取 */ }
+  }
+
+  private async pollUntilComplete(identifier: string) {
+    const start = Date.now();
+    while (Date.now() - start &lt; this.config.timeoutMs) {
+      await new Promise((r) =&gt; setTimeout(r, this.config.pollIntervalMs));
+      const state = await this.queryLinearState(identifier);
+
+      if (state === "human review")
+        return { success: true, linearIdentifier: identifier };
+      if (state === "done")
+        return { success: true, linearIdentifier: identifier };
+      if (["closed","cancelled","duplicate"].includes(state))
+        return { success: false, error: `Terminal: ${state}` };
+    }
+    return { success: false, error: "Timeout" };
+  }
+}</code></pre>
+
+<h3>4.3 审批回调：OpenClaw → Symphony</h3>
+<pre><code>// 批准 → 通知 Symphony 合并
+async function onSymphonyTaskApproved(linearIdentifier: string) {
+  await transitionLinearState(linearIdentifier, "Merging");
+  await triggerSymphonyRefresh();
+}
+
+// 拒绝 → 通知 Symphony 返工
+async function onSymphonyTaskRejected(linearIdentifier: string) {
+  await transitionLinearState(linearIdentifier, "Rework");
+  await triggerSymphonyRefresh();
+}
+
+async function transitionLinearState(
+  identifier: string, targetStateName: string
+) {
+  const linear = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
+  const issues = await linear.issues({
+    filter: { identifier: { eq: identifier } },
+  });
+  const issue = issues.nodes[0];
+  const team = await issue.team;
+  const states = await team.states();
+  const target = states.nodes.find(
+    (s) =&gt; s.name.toLowerCase() === targetStateName.toLowerCase()
+  );
+  await issue.update({ stateId: target.id });
+}</code></pre>
+
+<h3>4.4 工单拆解自动化（可选）</h3>
+<pre><code>import Anthropic from "@anthropic-ai/sdk";
+
+async function decomposeSpecToLinearIssues(specContent: string) {
+  const anthropic = new Anthropic();
+
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 4096,
+    messages: [{
+      role: "user",
+      content: `将以下设计规范拆解为独立的开发任务。
+每个任务包含: title, description, acceptanceCriteria,
+complexity ("simple"|"complex"), dependencies。
+以 JSON 数组输出。
+
+${specContent}`
+    }],
+  });
+
+  const subtasks = JSON.parse(response.content[0].text);
+
+  // 在 Linear 中创建工单...
+  // complex 任务自动打 route:symphony 标签
+  // 建立 blockedBy 依赖关系
+}</code></pre>
+</div>
+
+<!-- ════════════ §5 状态映射 ════════════ -->
+<div class="section" id="s5">
+<h2>5. 状态映射</h2>
+
+<h3>5.1 跨系统状态对照表</h3>
+<table>
+  <tr><th>Agentic Engineer</th><th>OpenClaw 状态</th><th>Linear 状态</th><th>Symphony 行为</th></tr>
+  <tr><td>规划中</td><td>—</td><td>—</td><td>—</td></tr>
+  <tr><td>spec_final 就绪</td><td>—</td><td>—</td><td>—</td></tr>
+  <tr><td></td><td>queued</td><td>（工单刚创建）</td><td>—</td></tr>
+  <tr><td></td><td>in_progress</td><td>Todo</td><td>Symphony 即将拾取</td></tr>
+  <tr><td></td><td>in_progress</td><td>In Progress</td><td>Codex 多轮执行中</td></tr>
+  <tr><td></td><td>in_progress</td><td>Rework</td><td>返工执行中</td></tr>
+  <tr><td></td><td>awaiting_review</td><td>Human Review</td><td>执行完毕，等待审批</td></tr>
+  <tr><td></td><td>（approved）</td><td>Merging</td><td>Symphony 执行 land</td></tr>
+  <tr><td></td><td>merged</td><td>Done</td><td>合并完成，清理工作空间</td></tr>
+  <tr><td></td><td>（rejected）</td><td>Rework</td><td>关闭旧 PR，重新执行</td></tr>
+</table>
+
+<h3>5.2 状态流转图</h3>
+<div class="diagram">OpenClaw 创建任务
+       │
+       ▼
+    queued ──→ Worker 认领 ──→ in_progress
+                                   │
+                                   │ (adapter=symphony)
+                                   │ 创建 Linear 工单
+                                   ▼
+                          Symphony 拾取 (Todo)
+                                   │
+                                   ▼
+                          Codex 执行 (In Progress)
+                                   │
+                                   ▼
+                          Human Review ──→ OpenClaw: awaiting_review
+                                                    │
+                                          ┌─────────┴─────────┐
+                                          ▼                   ▼
+                                     批准                    拒绝
+                                          │                   │
+                                          ▼                   ▼
+                                     Merging              Rework
+                                          │                   │
+                                          ▼                   ▼
+                                     Symphony land       Symphony 重新执行
+                                          │                   │
+                                          ▼                   ▼
+                                     Done → merged       回到 In Progress</div>
+</div>
+
+<!-- ════════════ §6 部署配置 ════════════ -->
+<div class="section" id="s6">
+<h2>6. 部署配置</h2>
+
+<h3>6.1 部署拓扑</h3>
+<div class="diagram">┌─────────────────── 单台服务器 ───────────────────┐
+│                                                   │
+│  ┌──────────────────┐  Port 4000                 │
+│  │ Symphony         │  (Elixir escript)          │
+│  │ labels_include:  │                            │
+│  │   - route:symphony                            │
+│  └──────────────────┘                            │
+│                                                   │
+│  ┌──────────────────┐  Port 3000                 │
+│  │ OpenClaw (Zoe)   │  (Next.js + Worker)        │
+│  │ + symphony adapter                            │
+│  └──────────────────┘                            │
+│                                                   │
+│  ┌──────────────────┐  按需运行                   │
+│  │ Agentic Engineer │  (Python CLI tools)        │
+│  └──────────────────┘                            │
+│                                                   │
+└───────────────────────────────────────────────────┘
+
+外部依赖: Linear API · Codex CLI · Claude CLI</div>
+
+<h3>6.2 环境变量</h3>
+<pre><code># ─── OpenClaw .env.local ───
+AGENT_ADAPTER=symphony
+SYMPHONY_API_URL=http://localhost:4000
+LINEAR_API_KEY=lin_api_xxxxx
+LINEAR_TEAM_ID=team_xxxxx
+LINEAR_PROJECT_ID=project_xxxxx
+
+# ─── Symphony ───
+# 无需新增，沿用现有配置
+LINEAR_API_KEY=lin_api_xxxxx</code></pre>
+
+<h3>6.3 Linear 设置</h3>
+<ol>
+  <li>创建标签：<code>route:symphony</code>、<code>complexity:simple</code>（可选）、<code>complexity:complex</code>（可选）</li>
+  <li>确保工单状态包含：Todo, In Progress, Human Review, Rework, Merging, Done</li>
+</ol>
+</div>
+
+<!-- ════════════ §7 实施计划 ════════════ -->
+<div class="section" id="s7">
+<h2>7. 实施计划</h2>
+
+<h3>7.1 时间线</h3>
+<table>
+  <tr><th>周次</th><th>任务</th><th>产出</th></tr>
+  <tr>
+    <td><strong>第 1 周</strong></td>
+    <td>Agentic Engineer 规划流程建立</td>
+    <td>端到端跑通一个规划流程，产出 spec_final.md</td>
+  </tr>
+  <tr>
+    <td><strong>第 2 周</strong></td>
+    <td>Symphony 标签过滤 + OpenClaw Symphony Adapter</td>
+    <td>Symphony ~20 行改动 + OpenClaw ~250 行 adapter + 冒烟测试</td>
+  </tr>
+  <tr>
+    <td><strong>第 3 周</strong></td>
+    <td>工单拆解流程 + 集成测试</td>
+    <td>全流程集成测试通过（规划→拆解→路由→执行→审批→合并）</td>
+  </tr>
+  <tr>
+    <td><strong>第 4 周</strong></td>
+    <td>试运行 + 调优</td>
+    <td>3-5 个真实任务走完整流水线 + 运维文档</td>
+  </tr>
+</table>
+
+<h3>7.2 验收标准</h3>
+<table>
+  <tr><th>里程碑</th><th>验收条件</th></tr>
+  <tr><td>Agentic Engineer 就绪</td><td>能产出通过 spec_lint + scorecard 收敛的 spec_final.md</td></tr>
+  <tr><td>Symphony Adapter 就绪</td><td>OpenClaw 创建 symphony 任务 → Symphony 自动拾取执行 → OpenClaw 收到完成通知</td></tr>
+  <tr><td>审批流程就绪</td><td>OpenClaw 批准 → Symphony 自动合并；拒绝 → Symphony 自动返工</td></tr>
+  <tr><td>全流程打通</td><td>从模糊需求到代码合并，端到端跑通一个真实任务</td></tr>
+</table>
+
+<h3>7.3 改动量汇总</h3>
+<table>
+  <tr><th>系统</th><th>改动</th><th>代码量</th></tr>
+  <tr><td>Symphony</td><td><code>config/schema.ex</code> + <code>orchestrator.ex</code> + <code>WORKFLOW.md</code></td><td>~20 行</td></tr>
+  <tr><td>OpenClaw</td><td><code>adapters/symphony.ts</code>（新）+ adapter 选择 + 审批回调</td><td>~250 行</td></tr>
+  <tr><td>Agentic Engineer</td><td>无代码改动，只需配置 skill</td><td>0 行</td></tr>
+  <tr><td>Linear</td><td>创建标签 + 确认状态</td><td>配置项</td></tr>
+  <tr><td><strong>合计</strong></td><td></td><td><strong>~270 行</strong></td></tr>
+</table>
+</div>
+
+<!-- ════════════ §8 风险 ════════════ -->
+<div class="section" id="s8">
+<h2>8. 风险与缓解</h2>
+<table>
+  <tr><th>风险</th><th>影响</th><th>概率</th><th>缓解</th></tr>
+  <tr><td>Symphony 轮询延迟</td><td>工单拾取有 ≤5s 延迟</td><td>低</td><td><code>POST /api/v1/refresh</code> 触发即时轮询</td></tr>
+  <tr><td>Linear API 限流</td><td>高频轮询被限制</td><td>中</td><td>OpenClaw 监控轮询间隔设为 10s+</td></tr>
+  <tr><td>Symphony 进程崩溃</td><td>正在执行的任务中断</td><td>低</td><td>OTP Supervisor 自动重启 + 状态协调恢复</td></tr>
+  <tr><td>状态不一致</td><td>OpenClaw 和 Linear 状态不匹配</td><td>中</td><td>OpenClaw 始终以 Linear 状态为准（查询而非缓存）</td></tr>
+  <tr><td>Agentic Engineer 规划不收敛</td><td>任务卡在规划阶段</td><td>中</td><td>设最大迭代次数（3 轮），超时由人工接管</td></tr>
+  <tr><td>Spec 拆解粒度不当</td><td>工单太大或太碎</td><td>中</td><td>初期人工拆解积累经验，再逐步自动化</td></tr>
+</table>
+</div>
+
+<!-- ════════════ §9 演进 ════════════ -->
+<div class="section" id="s9">
+<h2>9. 未来演进</h2>
+
+<h3>短期（1-3 月）</h3>
+<ul>
+  <li>完善路由决策：基于历史执行数据优化 adapter 选择</li>
+  <li>自动化工单拆解：Claude API + 人工审核</li>
+  <li>统一监控面板：在 OpenClaw UI 中嵌入 Symphony 状态</li>
+</ul>
+
+<h3>中期（3-6 月）</h3>
+<ul>
+  <li>Symphony 添加 <code>POST /api/v1/issues</code> 端点，支持直接推送工单（绕过 Linear）</li>
+  <li>OpenClaw 添加 Agentic Engineer 集成，规划流程自动触发</li>
+  <li>基于任务执行结果的路由规则自学习</li>
+</ul>
+
+<h3>长期（6-12 月）</h3>
+<ul>
+  <li>将 Symphony 的 AgentRunner 执行能力抽象为独立库</li>
+  <li>OpenClaw 原生集成 Symphony 执行引擎（不再需要 Linear 作为中间层）</li>
+  <li>支持更多 Agent 后端（Gemini、Cursor 等）</li>
+</ul>
+</div>
+
+<!-- ════════════ 附录 ════════════ -->
+<div class="section" id="appendix">
+<h2>附录</h2>
+
+<h3>A. 参考仓库</h3>
+<table>
+  <tr><th>项目</th><th>仓库</th><th>定位</th></tr>
+  <tr><td>Symphony</td><td>github.com/openai/symphony</td><td>深度执行引擎（Elixir）</td></tr>
+  <tr><td>Agentic Engineer</td><td>github.com/SiriusYou/agentic-engineer</td><td>规划方法论框架（Python）</td></tr>
+  <tr><td>OpenClaw (Zoe)</td><td>github.com/SiriusYou/openclaw-healthcare</td><td>编排控制台（TypeScript）</td></tr>
+</table>
+
+<h3>B. 关键 API 参考</h3>
+
+<h4>Symphony JSON API</h4>
+<table>
+  <tr><th>端点</th><th>方法</th><th>说明</th></tr>
+  <tr><td><code>/api/v1/state</code></td><td>GET</td><td>当前所有运行中/重试中的工单概览</td></tr>
+  <tr><td><code>/api/v1/{identifier}</code></td><td>GET</td><td>特定工单的详细执行状态</td></tr>
+  <tr><td><code>/api/v1/refresh</code></td><td>POST</td><td>触发 Symphony 立即轮询 Linear</td></tr>
+</table>
+
+<h4>Linear GraphQL（OpenClaw 使用）</h4>
+<table>
+  <tr><th>操作</th><th>用途</th></tr>
+  <tr><td><code>createIssue</code></td><td>创建带标签的工单</td></tr>
+  <tr><td><code>issueUpdate</code></td><td>修改工单状态（审批回调）</td></tr>
+  <tr><td><code>issues(filter: {identifier})</code></td><td>查询工单当前状态</td></tr>
+  <tr><td><code>createIssueRelation</code></td><td>建立工单依赖关系</td></tr>
+</table>
+</div>
+
+</div><!-- /container -->
+
+<div class="footer">
+  AI 编码工作流统一流水线方案 &middot; Agentic Engineer + OpenClaw (Zoe) + Symphony &middot; 2026
+</div>
+
+</body>
+</html>
